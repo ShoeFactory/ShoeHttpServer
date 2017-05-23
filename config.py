@@ -7,10 +7,16 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    MONGODB_DB = 'ShoePositionDev'
-    MONGODB_HOST = '127.0.0.1'
-    MONGODB_PORT = 27072
     SECRET_KEY = 'wangxk'
+
+    # mongoengine use pymongo internal
+    # add connect:False make things all right
+    MONGODB_SETTINGS = {
+        'db': 'ShoePositionDev',
+        'host': '127.0.0.1',
+        'port': 27072,
+        'connect': False
+    }
 
 
 class ProductionConfig(Config):

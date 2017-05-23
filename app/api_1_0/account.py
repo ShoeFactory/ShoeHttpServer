@@ -18,14 +18,15 @@ def register_qrcode():
     qrcode = str(random.randint(100000, 1000000))
 
     # send qrcode to user by SMS
-    send_sms_qrcode(telephone, qrcode)
+    # send_sms_qrcode(telephone, qrcode)
 
     # record qrcode to database
     new_qrcode = RegisterQrcode(telephone=telephone,
                                 qrcode=qrcode,
                                 created=datetime.utcnow())
     new_qrcode.save()
-    return jsonify(success=True, msg='register_qrcode')
+
+    return jsonify(success=True, to='5', msg='register_qrcode')
 
 
 @api.route('/account/register', methods=['POST', ])
