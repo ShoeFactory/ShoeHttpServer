@@ -105,3 +105,4 @@ mongodb/
 
 # pycharm
 .idea/
+/fabfile.py
