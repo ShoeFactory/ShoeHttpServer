@@ -11,6 +11,7 @@ def send_async_qrcode(phone_number, validate_number):
     host_path = 'http://sms.market.alicloudapi.com/singleSendSms'
 
     # header
+    # TODO not secret
     app_code = 'b856ac7c95604275a313ef0f863cb913'
     headers = {'Authorization': 'APPCODE ' + app_code}
 
