@@ -18,7 +18,7 @@ def register_qrcode():
     qrcode = str(random.randint(100000, 1000000))
 
     # send qrcode to user by SMS
-    # send_sms_qrcode(telephone, qrcode)
+    send_sms_qrcode(telephone, qrcode)
 
     # record qrcode to database
     new_qrcode = RegisterQrcode(telephone=telephone,
