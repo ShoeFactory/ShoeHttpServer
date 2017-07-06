@@ -14,6 +14,12 @@ def register_qrcode():
     # get telephone
     telephone = request.form['telephone']
 
+    # if already registered
+    user = User.objects(telephone=telephone).first()
+
+    if user is not None:
+        return jsonify(success=False, msg='telephone already registered')
+
     # generate qrcode
     qrcode = str(random.randint(100000, 1000000))
 
@@ -26,7 +32,7 @@ def register_qrcode():
                                 created=datetime.utcnow())
     new_qrcode.save()
 
-    return jsonify(success=True, to='5', msg='register_qrcode')
+    return jsonify(success=True, msg='register_qrcode')
 
 
 @api.route('/account/register', methods=['POST', ])
@@ -68,7 +74,6 @@ def login():
 
     # generate a token
     token = user.generate_token()
-    print(type(token))
 
     # store token into db
     old_users = User.objects(telephone=telephone)
@@ -124,6 +129,18 @@ def password_retrieve():
     user.password = newpassword
     user.save()
     return jsonify(success=True, msg='password reset success')
+
+
+@api.route('/account/profile', methods=['POST', ])
+@auth.login_required
+def get_user_profile():
+
+    # user
+    auth_type, token = request.headers['Authorization'].split(None, 1)
+    user = get_user_by_token(token)
+
+    print(user)
+    return jsonify(success=True, name=user.name)
 
 
 @api.route('/account/devices')
