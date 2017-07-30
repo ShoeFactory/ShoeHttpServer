@@ -2,21 +2,63 @@
 
 from flask import current_app
 from . import db
-from mongoengine import StringField, DateTimeField, PointField
+from mongoengine import StringField, DateTimeField, PointField, IntField
 from mongoengine import ListField, ReferenceField, EmbeddedDocumentField
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import JSONWebSignatureSerializer
 import random
 
 
-class PositionRecord(db.EmbeddedDocument):
-    datetime = DateTimeField()
-    position = PointField()
-
-
 class Device(db.Document):
     sid = StringField(required=True, unique=True)
-    records = ListField(EmbeddedDocumentField(PositionRecord))
+
+
+class PositionRecord(db.Document):
+    device = ReferenceField(Device)
+
+    # 日期时间 yy-MM-dd hh:mm:ss C++
+    # 日期时间 %Y-%m-%d %H:%M:%S Python
+    datetime = DateTimeField()
+    # 消息长度
+    message_length = StringField()
+    # 卫星个数
+    satellite_count = StringField()
+    # 经度
+    longitude = StringField()
+    # 维度
+    latitude = StringField()
+    # 速度
+    speed = StringField()
+    # 状态
+    status = StringField()
+    # 航向
+    direction = StringField()
+
+    def to_json_dict(self):
+        return {'IMEI': self.device.sid,
+                'datetime': self.datetime,
+                'message_length': self.message_length,
+                'satellite_count': self.satellite_count,
+                'longitude': self.longitude,
+                'latitude': self.latitude,
+                'speed': self.speed,
+                'status': self.status,
+                'direction': self.direction}
+
+    def from_json_dict(self, json):
+        IMEI = json['IMEI']
+        device = Device.objects(sid=IMEI).first()
+        if device is None:
+            return
+        self.device = device
+        self.datetime = json["datetime"]
+        self.message_length = json["message_length"]
+        self.satellite_count = json["satellite_count"]
+        self.longitude = json["longitude"]
+        self.latitude = json["latitude"]
+        self.speed = json["speed"]
+        self.status = json["status"]
+        self.direction = json["direction"]
 
 
 class User(db.Document):
