@@ -143,17 +143,13 @@ def get_user_profile():
     return jsonify(success=True, name=user.name)
 
 
-@api.route('/account/devices')
+@api.route('/account/devices', methods=['POST', ])
 @auth.login_required
 def devices():
     auth_type, token = request.headers['Authorization'].split(None, 1)
     user = get_user_by_token(token)
 
     binds = UserDeviceBind.objects(user__in=[user])
-
-    # bind = binds.first()
-    # aaa = bind.to_json_dict()
-    # return jsonify(success=True, devices=aaa)
 
     return jsonify(success=True, devices=[bind.to_json_dict() for bind in binds])
 
