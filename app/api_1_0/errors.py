@@ -3,7 +3,7 @@ from flask import jsonify
 
 
 @api.app_errorhandler(400)
-def unauthorized(e):
+def bad_request(e):
     response = jsonify(success=False, msg='bad request')
     response.status_code = 400
     return response
@@ -24,8 +24,8 @@ def page_not_found(e):
 
 
 @api.app_errorhandler(405)
-def unauthorized(e):
-    response = jsonify(success=False, msg='wrong method')
+def wrong_request_method(e):
+    response = jsonify(success=False, msg='wrong request method')
     response.status_code = 405
     return response
 
