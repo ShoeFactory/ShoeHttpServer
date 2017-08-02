@@ -131,6 +131,21 @@ def password_retrieve():
     return jsonify(success=True, msg='password reset success')
 
 
+@api.route('/account/password/update', methods=['POST', ])
+@auth.login_required
+def password_update():
+    # get form data
+    new_password = request.form['new_password']
+
+    # user
+    auth_type, token = request.headers['Authorization'].split(None, 1)
+    user = get_user_by_token(token)
+
+    user.password = new_password
+    user.save()
+    return jsonify(success=True, msg='password update success')
+
+
 @api.route('/account/profile', methods=['POST', ])
 @auth.login_required
 def get_user_profile():
@@ -141,6 +156,21 @@ def get_user_profile():
 
     print(user)
     return jsonify(success=True, name=user.name)
+
+
+@api.route('/account/profile/update', methods=['POST', ])
+@auth.login_required
+def profile_update():
+    # get form data
+    new_name = request.form['new_name']
+
+    # user
+    auth_type, token = request.headers['Authorization'].split(None, 1)
+    user = get_user_by_token(token)
+
+    user.name = new_name
+    user.save()
+    return jsonify(success=True, msg='profile update success')
 
 
 @api.route('/account/devices', methods=['POST', ])
