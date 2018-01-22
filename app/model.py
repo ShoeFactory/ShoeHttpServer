@@ -2,7 +2,7 @@
 
 from flask import current_app
 from . import db
-from mongoengine import StringField, DateTimeField, PointField, IntField
+from mongoengine import StringField, DateTimeField, PointField, IntField, BooleanField
 from mongoengine import ListField, ReferenceField, EmbeddedDocumentField
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import JSONWebSignatureSerializer
@@ -11,7 +11,84 @@ import random
 
 class Device(db.Document):
     sid = StringField(required=True, unique=True)
+    last_online_time = StringField()
+    power = IntField()
 
+class LoggedDevice(db.Document):
+    device = ReferenceField(Device)
+
+class User(db.Document):
+    telephone = StringField(required=True, unique=True)
+    password_hash = StringField()
+    name = StringField()
+
+    def get_password(self):
+        raise AttributeError('password is not a readable attribute')
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    password = property(get_password, set_password)
+
+    def verify_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def generate_token(self):
+        secret_key = current_app.config['SECRET_KEY']
+        serializer = JSONWebSignatureSerializer(secret_key)
+        bytes_token = serializer.dumps({'telephone': self.telephone,
+                                        'random': random.random()})
+        string_token = bytes_token.decode()
+        return string_token
+
+class LoggedUser(db.Document):
+    user = ReferenceField(User)
+    token = StringField()
+    created = DateTimeField()
+    meta = {
+        'indexes': [
+            {
+                'fields': ['created'],
+                'expireAfterSeconds': 60 * 60 * 24
+            }
+        ]
+    }
+
+
+class UserDeviceBind(db.Document):
+    name = StringField()
+    user = ReferenceField(User)
+    device = ReferenceField(Device)
+
+    def to_json_dict(self):
+        return {'name': self.name, 'sid': self.device.sid}
+
+
+class RegisterQrcode(db.Document):
+    telephone = StringField()
+    created = DateTimeField()
+    qrcode = StringField()
+    meta = {
+        'indexes': [
+            {
+                'fields': ['created'],
+                'expireAfterSeconds': 60 * 60 * 24
+            }
+        ]
+    }
+
+class PasswordQrcode(db.Document):
+    telephone = StringField()
+    created = DateTimeField()
+    qrcode = StringField()
+    meta = {
+        'indexes': [
+            {
+                'fields': ['created'],
+                'expireAfterSeconds': 60 * 60 * 24
+            }
+        ]
+    }
 
 class PositionRecord(db.Document):
     device = ReferenceField(Device)
@@ -59,79 +136,3 @@ class PositionRecord(db.Document):
         self.speed = json["speed"]
         self.status = json["status"]
         self.direction = json["direction"]
-
-
-class User(db.Document):
-    telephone = StringField(required=True, unique=True)
-    password_hash = StringField()
-    name = StringField()
-
-    def get_password(self):
-        raise AttributeError('password is not a readable attribute')
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    password = property(get_password, set_password)
-
-    def verify_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-    def generate_token(self):
-        secret_key = current_app.config['SECRET_KEY']
-        serializer = JSONWebSignatureSerializer(secret_key)
-        bytes_token = serializer.dumps({'telephone': self.telephone,
-                                        'random': random.random()})
-        string_token = bytes_token.decode()
-        return string_token
-
-
-class LoggedUser(db.Document):
-    user = ReferenceField(User)
-    token = StringField()
-    created = DateTimeField()
-    meta = {
-        'indexes': [
-            {
-                'fields': ['created'],
-                'expireAfterSeconds': 60 * 60 * 24
-            }
-        ]
-    }
-
-
-class RegisterQrcode(db.Document):
-    telephone = StringField()
-    created = DateTimeField()
-    qrcode = StringField()
-    meta = {
-        'indexes': [
-            {
-                'fields': ['created'],
-                'expireAfterSeconds': 60 * 60 * 24
-            }
-        ]
-    }
-
-
-class PasswordQrcode(db.Document):
-    telephone = StringField()
-    created = DateTimeField()
-    qrcode = StringField()
-    meta = {
-        'indexes': [
-            {
-                'fields': ['created'],
-                'expireAfterSeconds': 60 * 60 * 24
-            }
-        ]
-    }
-
-
-class UserDeviceBind(db.Document):
-    name = StringField()
-    user = ReferenceField(User)
-    device = ReferenceField(Device)
-
-    def to_json_dict(self):
-        return {'name': self.name, 'sid': self.device.sid}
