@@ -2,11 +2,20 @@
 
 from flask import current_app
 from . import db
-from mongoengine import StringField, DateTimeField, PointField, IntField, BooleanField
-from mongoengine import ListField, ReferenceField, EmbeddedDocumentField
+from mongoengine import StringField, DateTimeField, PointField, IntField, BooleanField, ListField
+from mongoengine import ListField, ReferenceField, EmbeddedDocumentField, EmbeddedDocumentListField
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import JSONWebSignatureSerializer
 import random
+
+
+class PositionGPS(db.EmbeddedDocument):
+    # 时间
+    datetime = StringField(required=True)
+    # 经度
+    longitude = IntField()
+    # 维度
+    latitude = IntField()
 
 
 class Device(db.Document):
@@ -14,8 +23,13 @@ class Device(db.Document):
     last_online_time = StringField()
     power = IntField()
 
+    # 存放一个gps列表 按照时间排序 lbs转换后再存
+    gps_list = EmbeddedDocumentListField(PositionGPS)
+
+
 class LoggedDevice(db.Document):
     device = ReferenceField(Device)
+
 
 class User(db.Document):
     telephone = StringField(required=True, unique=True)
@@ -40,6 +54,7 @@ class User(db.Document):
                                         'random': random.random()})
         string_token = bytes_token.decode()
         return string_token
+
 
 class LoggedUser(db.Document):
     user = ReferenceField(User)
@@ -77,6 +92,7 @@ class RegisterQrcode(db.Document):
         ]
     }
 
+
 class PasswordQrcode(db.Document):
     telephone = StringField()
     created = DateTimeField()
@@ -89,6 +105,7 @@ class PasswordQrcode(db.Document):
             }
         ]
     }
+
 
 class PositionRecord(db.Document):
     device = ReferenceField(Device)

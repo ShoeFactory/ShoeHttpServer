@@ -1,12 +1,35 @@
 from flask import jsonify, request
 from . import api
 from .authtoken import auth, get_user_by_token
-from ..model import PositionRecord, Device, UserDeviceBind
+from ..model import PositionRecord, Device, UserDeviceBind, PositionGPS
 from datetime import datetime
+import json
 
 
-@api.route('/position/add', methods=['POST', ])
-def record_add():
+@api.route('/position/addgps', methods=['POST', ])
+def position_addgps():
+    requestBody = json.loads(request.data)
+    imei = requestBody['sid']
+
+    # 判断设置是否存在 否则是野设备
+    device = Device.objects(sid=imei).first()
+    if device is None:
+        return jsonify(code=1, message='device not binded yet')
+
+    # 添加记录
+    gps = requestBody['gps']
+    new_gps = PositionGPS(datetime=gps['datetime'],
+                          latitude=gps['latitude'],
+                          longitude=gps['longitude'])
+    device.gps_list.append(new_gps)
+    device.save()
+    return jsonify(code=0, message='add gps succeed')
+
+
+@api.route('/position/addwifilbs', methods=['POST', ])
+def position_addwifilbs():
+
+    # todo 微博api 多线程解析 入库
     position_record = PositionRecord()
     position_record.from_json_dict(request.form)
 
