@@ -1,7 +1,7 @@
 from flask import jsonify, request
 from . import api
 from .authtoken import auth, get_user_by_token
-from ..model import PositionRecord, Device, UserDeviceBind, PositionGPS
+from ..model import PositionRecord, Device, UserDeviceBind, PositionGPS, PositionWifiLBS
 from datetime import datetime
 import json
 
@@ -30,14 +30,20 @@ def position_addgps():
 def position_addwifilbs():
 
     # todo 微博api 多线程解析 入库
-    position_record = PositionRecord()
-    position_record.from_json_dict(request.form)
+    requestBody = json.loads(request.data)
+    imei = requestBody['sid']
 
-    if position_record.device is None:
-        return jsonify(success=False, msg='imei not bind yet')
-    else:
-        position_record.save()
-        return jsonify(success=True, msg='position added')
+    # 判断设置是否存在 否则是野设备
+    device = Device.objects(sid=imei).first()
+    if device is None:
+        return jsonify(code=1, message='device not binded yet')
+
+    # 添加记录
+    position_wifilbs = PositionWifiLBS()
+    position_wifilbs.from_json_dict(requestBody['wifilbs'])
+    device.wifilbs_list.append(position_wifilbs)
+    device.save()
+    return jsonify(code=0, message='add wifilbs succeed')
 
 
 @api.route('/position/remove', methods=['POST', ])

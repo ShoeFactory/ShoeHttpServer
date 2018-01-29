@@ -2,6 +2,7 @@
 
 from flask import current_app
 from . import db
+from mongoengine import FloatField
 from mongoengine import StringField, DateTimeField, PointField, IntField, BooleanField, ListField
 from mongoengine import ListField, ReferenceField, EmbeddedDocumentField, EmbeddedDocumentListField
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,9 +14,46 @@ class PositionGPS(db.EmbeddedDocument):
     # 时间
     datetime = StringField(required=True)
     # 经度
-    longitude = IntField()
+    longitude = FloatField()
     # 维度
-    latitude = IntField()
+    latitude = FloatField()
+
+
+class WifiStruct(db.EmbeddedDocument):
+    bssid = StringField()
+    rssi = StringField()
+
+
+class LBSStruct(db.EmbeddedDocument):
+    lac = StringField()  # 16进制
+    cellid = StringField()
+    mciss = StringField()
+
+
+class PositionWifiLBS(db.EmbeddedDocument):
+    dateTime = StringField(required=True, unique=True)
+    mcc = StringField()  # 移动国家码
+    mnc = StringField()  # 移动网络码
+    lbs_list = EmbeddedDocumentListField(LBSStruct)
+    wifi_list = EmbeddedDocumentListField(WifiStruct)
+
+    def from_json_dict(self, wifilbs):
+        self.dateTime = wifilbs['dateTime']
+        self.mcc = wifilbs['mccnc']['mcc']
+        self.mnc = wifilbs['mccnc']['mnc']
+
+        for lbs_item in wifilbs['lbs']:
+            lbs_struct = LBSStruct()
+            lbs_struct.lac = lbs_item['lac']
+            lbs_struct.cellid = lbs_item['cellid']
+            lbs_struct.mciss = lbs_item['mciss']
+            self.lbs_list.append(lbs_struct)
+
+        for wifi_item in wifilbs['wifi']:
+            wifi_struct = WifiStruct()
+            wifi_struct.bssid = wifi_item['bssid']
+            wifi_struct.rssi = wifi_item['rssi']
+            self.wifi_list.append(wifi_struct)
 
 
 class Device(db.Document):
@@ -25,6 +63,7 @@ class Device(db.Document):
 
     # 存放一个gps列表 按照时间排序 lbs转换后再存
     gps_list = EmbeddedDocumentListField(PositionGPS)
+    wifilbs_list = EmbeddedDocumentListField(PositionWifiLBS)
 
 
 class LoggedDevice(db.Document):
