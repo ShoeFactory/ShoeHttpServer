@@ -12,7 +12,7 @@ import random
 
 class PositionGPS(db.EmbeddedDocument):
     # 时间
-    datetime = StringField(required=True)
+    datetime = StringField(required=True, unique=True)
     # 经度
     longitude = FloatField()
     # 维度
@@ -25,6 +25,8 @@ class WifiStruct(db.EmbeddedDocument):
 
 
 class LBSStruct(db.EmbeddedDocument):
+    mcc = StringField()  # 移动国家码
+    mnc = StringField()  # 移动网络码
     lac = StringField()  # 16进制
     cellid = StringField()
     mciss = StringField()
@@ -32,18 +34,22 @@ class LBSStruct(db.EmbeddedDocument):
 
 class PositionWifiLBS(db.EmbeddedDocument):
     dateTime = StringField(required=True, unique=True)
-    mcc = StringField()  # 移动国家码
-    mnc = StringField()  # 移动网络码
     lbs_list = EmbeddedDocumentListField(LBSStruct)
-    wifi_list = EmbeddedDocumentListField(WifiStruct)
+    # 根据lbs计算出来的gps 不大正确 仅供参考
+    caculated_gps = EmbeddedDocumentField(PositionGPS)
+    # mnc = StringField()
+    # mcc = StringField()
+    # wifi_list = StringField()
 
     def from_json_dict(self, wifilbs):
         self.dateTime = wifilbs['dateTime']
-        self.mcc = wifilbs['mccnc']['mcc']
-        self.mnc = wifilbs['mccnc']['mnc']
+        common_mcc = wifilbs['mccnc']['mcc']
+        common_mnc = wifilbs['mccnc']['mnc']
 
         for lbs_item in wifilbs['lbs']:
             lbs_struct = LBSStruct()
+            lbs_struct.mcc = common_mcc
+            lbs_struct.mnc = common_mnc
             lbs_struct.lac = lbs_item['lac']
             lbs_struct.cellid = lbs_item['cellid']
             lbs_struct.mciss = lbs_item['mciss']
@@ -60,9 +66,11 @@ class Device(db.Document):
     sid = StringField(required=True, unique=True)
     last_online_time = StringField()
     power = IntField()
+    is_online = BooleanField()
 
-    # 存放一个gps列表 按照时间排序 lbs转换后再存
+    # gps列表
     gps_list = EmbeddedDocumentListField(PositionGPS)
+    # lbs列表 定时转换
     wifilbs_list = EmbeddedDocumentListField(PositionWifiLBS)
 
 
@@ -113,6 +121,7 @@ class UserDeviceBind(db.Document):
     name = StringField()
     user = ReferenceField(User)
     device = ReferenceField(Device)
+    is_subscribed = BooleanField()
 
     def to_json_dict(self):
         return {'name': self.name, 'sid': self.device.sid}

@@ -13,7 +13,7 @@ class DevelopmentConfig(Config):
     # add connect:False make things all right
     MONGODB_SETTINGS = {
         'db': 'ShoePositionDev',
-        'host': '47.93.6.161',
+        'host': '127.0.0.1',
         'port': 27072,
         'connect': False
     }

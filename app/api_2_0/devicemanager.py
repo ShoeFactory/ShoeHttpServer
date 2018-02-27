@@ -8,80 +8,65 @@ import random
 from .authtoken import auth, get_user_by_token
 import json
 
-@api.route('/devicemanager/setonline', methods=['POST'], )
-def device_online():
-   
+
+@api.route('/devicemanager/setpower', methods=['POST'], )
+def setpower():
     requestBody = json.loads(request.data)
     imei = requestBody['sid']
+    power = requestBody["power"]
 
     # 判断设置是否存在 否则是野设备
     device = Device.objects(sid=imei).first()
     if device is None:
         return jsonify(code=1, message='device not binded yet')
-    
-    # 更新device的最后登陆时间
-    dt = datetime.now() 
-    device.last_online_time = dt.strftime('%Y%m%d%H%M%S')
+
+    device.power = power
     device.save()
 
-    # 判断是否已登陆
-    old_logged = LoggedDevice.objects(device__in=[device]).first()
-    if old_logged is None:
-        loggedDevice = LoggedDevice(device=device)
-        loggedDevice.save()
-    return jsonify(code=0, message='set device online success')
-   
+    return jsonify(code=0, message='set device power success')
 
-@api.route('/devicemanager/setoffline', methods=['POST'], )
-def device_offline():
+
+@api.route('/devicemanager/setisonline', methods=['POST'], )
+def setisonline():
     requestBody = json.loads(request.data)
     imei = requestBody['sid']
+    isOnline = requestBody["isOnline"]
 
-    # 判断device有效性
+    # 判断设置是否存在 否则是野设备
     device = Device.objects(sid=imei).first()
     if device is None:
         return jsonify(code=1, message='device not binded yet')
 
-    # 移除
-    loggedDevice = LoggedDevice.objects(device__in=[device]).first()
-    if loggedDevice is not None:
-        loggedDevice.delete()
-    return jsonify(code=0, message='set device offline success')
+    device.is_online = isOnline
+    device.save()
+
+    return jsonify(code=0, message='set device isonline success')
 
 
-@api.route('/devicemanager/isonline', methods=['POST'], )
+@api.route('/devicemanager/setissubscribed', methods=['POST'], )
 @auth.login_required
-def device_isonline():
-    # 找到当前用户
+def setissubscribed():
+    requestBody = json.loads(request.data)
+    imei = requestBody['sid']
+    is_subscribed = requestBody["isSubscribed"]
+
+    # 判断设置是否存在 否则是野设备
+    device = Device.objects(sid=imei).first()
+    if device is None:
+        return jsonify(code=1, message='device not binded yet')
+
     auth_type, token = request.headers['Authorization'].split(None, 1)
     user = get_user_by_token(token)
-    print(user)
 
     # 找到当前用户所有的设备
     binds = UserDeviceBind.objects(user__in=[user])
-    devices = [x.device for x in binds]
-    
-    # 查询设备是否登陆
-    result = []
-    for device in devices:
-        logged = LoggedDevice.objects(device__in=[device]).first()
-        if logged is not None:
-            result.append(device.sid)
-    return jsonify(code=0, message='isonline require success', data=result)   
+    for bind_device in binds:
+        if bind_device.device.sid == imei:
+            bind_device.is_subscribed = is_subscribed
+            bind_device.save()
 
-@api.route('/devicemanager/setstatus', methods=['POST'], )
-def device_setstatus():
-    requestBody = json.loads(request.data)
-    imei = requestBody['sid']
-    status = requestBody['status']
-    power = status['power']
+    return jsonify(code=0, message='set device issubscribed success')
 
-    device = Device.objects(sid=imei).first()
-    if device is None:
-        return jsonify(code=1, message='device not binded yet')
-    device.power = power
-    device.save()
-    return jsonify(code=1, message='set status success')
 
 @api.route('/devicemanager/getstatus', methods=['POST'], )
 @auth.login_required
@@ -90,12 +75,20 @@ def devices_getstatus():
     auth_type, token = request.headers['Authorization'].split(None, 1)
     user = get_user_by_token(token)
 
+    result = []
+
     # 找到当前用户所有的设备
     binds = UserDeviceBind.objects(user__in=[user])
-    devices = [x.device for x in binds]
+    for bind_device in binds:
+        device_status = {}
 
-    # 查询设备的电量
-    result = {}
-    for device in devices:
-        result[device.sid] = device.power
+        device_status["imei"] = bind_device.device.sid
+        device_status["power"] = bind_device.device.power
+        device_status["isOnline"] = bind_device.device.is_online
+
+        device_status["name"] = bind_device.name
+        device_status["isSubscribed"] = bind_device.is_subscribed
+
+        result.append(device_status)
+
     return jsonify(code=0, message='isonline require success', data=result)
