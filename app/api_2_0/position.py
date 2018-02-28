@@ -96,36 +96,60 @@ def record_remove():
 @auth.login_required
 def record_latest():
     requestBody = json.loads(request.data)
-
     type = requestBody['type']
-    imeis = requestBody['sids']
+    # imeis = requestBody['sids']
 
+    auth_type, token = request.headers['Authorization'].split(None, 1)
+    user = get_user_by_token(token)
+
+    # 最终生成的
     result = []
-    # 遍历device列表
-    for imei in imeis:
 
+    # 找到当前用户所有的设备
+    binds = UserDeviceBind.objects(user__in=[user])
+    for bind_device in binds:
         device_gps = {}
-        device_gps["imei"] = imei
-        device_gps["lan"] = 116.380122
-        device_gps["lon"] = 39.932863
-        device_gps["name"] = "test"
+        device_gps['imei'] = bind_device.device.sid
+        device_gps['name'] = bind_device.name
+
+        # 全部的
+        if type == 0:
+            gps_list = bind_device.device.gps_list
+            lbs_list = bind_device.device.wifilbs_list
+            if len(gps_list) == 0 and len(lbs_list) != 0:
+                device_gps['gps'] = lbs_list[-1].caculated_gps
+            elif len(gps_list) != 0 and len(lbs_list) == 0:
+                device_gps['gps'] = gps_list[-1]
+            elif len(gps_list) == 0 and len(lbs_list) == 0:
+                device_gps['gps'] = None
+            else:
+                real_gps = gps_list[-1]
+                caculated_gps = lbs_list[-1].caculated_gps
+                if caculated_gps is not None:
+                    if caculated_gps.datetime > real_gps.datetime:
+                        device_gps['gps'] = caculated_gps
+                    else:
+                        device_gps['gps'] = real_gps
+                else:
+                    device_gps['gps'] = real_gps
+
+        # 只取gps
+        elif type == 1:
+            gps_list = bind_device.device.gps_list
+            if len(gps_list) == 0:
+                device_gps['gps'] = None
+            else:
+                device_gps['gps'] = gps_list[-1]
+
+        # 只取lbs计算的gps
+        elif type == 2:
+            lbs_list = bind_device.device.wifilbs_list
+            if len(lbs_list) == 0:
+                device_gps['gps'] = None
+            else:
+                device_gps['gps'] = lbs_list[-1].caculated_gps
+
         result.append(device_gps)
-
-        device = Device.objects(sid=imei).first()
-
-        if device is None:
-            continue
-        else:
-            # 全部的
-            if type == 0:
-                pass
-            # 只取gps
-            elif type == 1:
-                gps_list = device.gps_list
-
-            # 只取lbs计算的gps
-            elif type == 2:
-                lbs_list = device.wifilbs_list
 
     return jsonify(code=0, data=result)
 

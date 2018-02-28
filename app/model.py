@@ -35,11 +35,10 @@ class LBSStruct(db.EmbeddedDocument):
 class PositionWifiLBS(db.EmbeddedDocument):
     dateTime = StringField(required=True, unique=True)
     lbs_list = EmbeddedDocumentListField(LBSStruct)
+    wifi_list = EmbeddedDocumentListField(WifiStruct)
+
     # 根据lbs计算出来的gps 不大正确 仅供参考
     caculated_gps = EmbeddedDocumentField(PositionGPS)
-    # mnc = StringField()
-    # mcc = StringField()
-    # wifi_list = StringField()
 
     def from_json_dict(self, wifilbs):
         self.dateTime = wifilbs['dateTime']
